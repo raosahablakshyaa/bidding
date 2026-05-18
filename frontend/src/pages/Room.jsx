@@ -3,7 +3,6 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useBiddingRoom } from '../hooks/useBiddingRoom';
 import HostDashboard from '../components/HostDashboard';
 import BidderDashboard from '../components/BidderDashboard';
-import WinnerScreen from '../components/WinnerScreen';
 import { Loader2 } from 'lucide-react';
 
 export default function Room() {
@@ -17,20 +16,11 @@ export default function Room() {
   const budget = parseInt(queryParams.get('budget')) || 1000;
   const password = queryParams.get('password') || '';
 
-  const {
-    room,
-    error,
-    timerStatus,
-    isConnected,
-    recentBids,
-    lastWinner,
-    actions
-  } = useBiddingRoom(roomId, username, isHost, budget, password);
+  const { room, error, timerStatus, isConnected, recentBids, lastWinner, actions } =
+    useBiddingRoom(roomId, username, isHost, budget, password);
 
   useEffect(() => {
-    if (!username) {
-      navigate(`/join/${roomId}`);
-    }
+    if (!username) navigate(`/join/${roomId}`);
   }, [username, roomId, navigate]);
 
   if (error) {
@@ -59,18 +49,6 @@ export default function Room() {
 
   return (
     <div className="min-h-screen p-4 md:p-6 lg:p-8 flex flex-col">
-      {/* Winner Overlay */}
-      {lastWinner && (
-        <WinnerScreen
-          winnerDetails={lastWinner}
-          isHost={isUserHost}
-          currentUser={currentUser}
-          onDismiss={actions.dismissWinner}
-          onNextRound={(item) => { actions.startRound(item); actions.dismissWinner(); }}
-        />
-      )}
-
-      {/* Top Bar */}
       <header className="flex justify-between items-center mb-6 glass-card p-4 rounded-2xl">
         <div className="flex items-center gap-4">
           <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
@@ -91,21 +69,9 @@ export default function Room() {
       </header>
 
       {isUserHost ? (
-        <HostDashboard
-          room={room}
-          timerStatus={timerStatus}
-          actions={actions}
-          recentBids={recentBids}
-          roomId={roomId}
-        />
+        <HostDashboard room={room} timerStatus={timerStatus} actions={actions} recentBids={recentBids} roomId={roomId} />
       ) : (
-        <BidderDashboard
-          room={room}
-          timerStatus={timerStatus}
-          actions={actions}
-          currentUser={currentUser}
-          recentBids={recentBids}
-        />
+        <BidderDashboard room={room} timerStatus={timerStatus} actions={actions} currentUser={currentUser} recentBids={recentBids} lastWinner={lastWinner} />
       )}
     </div>
   );
