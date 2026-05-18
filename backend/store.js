@@ -41,7 +41,8 @@ function createRoom(roomId, hostId, username, startingBalance = 1000, password =
       timerStartedAt: null,
       timerPausedAt: null,
       timeLeft: 60,
-      bidHistory: []
+      bidHistory: [],
+      soldItems: []
     },
     users: {}
   };
@@ -115,6 +116,42 @@ function placeBid(roomId, socketId, amount) {
   return { success: true, room };
 }
 
+function markAsSold(roomId) {
+  const room = rooms[roomId];
+  if (!room) return { error: 'Room not found' };
+  
+  let winnerDetails = null;
+  
+  if (room.state.highestBidder && room.state.highestBid > 0) {
+    const winnerSocketId = Object.keys(room.users).find(
+      socketId => room.users[socketId].username === room.state.highestBidder
+    );
+    
+    if (winnerSocketId) {
+      room.users[winnerSocketId].balance -= room.state.highestBid;
+      
+      winnerDetails = {
+        itemName: room.state.currentItem || 'Mystery Item',
+        winner: room.state.highestBidder,
+        amount: room.state.highestBid,
+        timestamp: Date.now()
+      };
+      
+      room.state.soldItems.unshift(winnerDetails);
+    }
+  }
+  
+  // Reset for next item
+  room.state.currentItem = null;
+  room.state.highestBid = 0;
+  room.state.highestBidder = null;
+  room.state.bidHistory = [];
+  room.state.status = 'ended';
+  room.state.timeLeft = 0;
+  
+  return { success: true, room, winnerDetails };
+}
+
 module.exports = {
   rooms,
   createRoom,
@@ -123,5 +160,6 @@ module.exports = {
   addUserToRoom,
   removeUserFromRoom,
   updateRoomSettings,
-  placeBid
+  placeBid,
+  markAsSold
 };

@@ -93,6 +93,9 @@ export default function HostDashboard({ room, timerStatus, actions, recentBids, 
                   <Square size={20} /> Force End
                 </button>
               </div>
+              <button onClick={actions.markAsSold} className="w-full btn-primary bg-green-500 hover:bg-green-600 shadow-[0_0_15px_rgba(34,197,94,0.5)] py-3 mt-2 font-bold text-lg">
+                SOLD! (End & Record)
+              </button>
             </div>
           )}
         </div>
@@ -110,6 +113,26 @@ export default function HostDashboard({ room, timerStatus, actions, recentBids, 
                     <span className="font-medium">{user.username}</span>
                   </div>
                   <span className="font-mono text-secondary">${user.balance.toLocaleString()}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Sold Items History */}
+        <div className="glass-card p-6 flex-1 flex flex-col mt-6 lg:mt-0">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-green-400">Sold Items History</h2>
+          <div className="flex-1 overflow-y-auto pr-2 space-y-3">
+            {!room.state.soldItems || room.state.soldItems.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">No items sold yet.</p>
+            ) : (
+              room.state.soldItems.map((item, i) => (
+                <div key={i} className="flex flex-col p-3 bg-green-900/20 rounded-xl border border-green-500/30">
+                  <span className="font-bold text-white text-lg">{item.itemName}</span>
+                  <div className="flex justify-between items-center mt-1 text-sm">
+                    <span className="text-gray-400">Winner: <span className="text-primary font-bold">{item.winner}</span></span>
+                    <span className="font-mono text-green-400 font-bold">${item.amount.toLocaleString()}</span>
+                  </div>
                 </div>
               ))
             )}

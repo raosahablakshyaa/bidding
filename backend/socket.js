@@ -92,25 +92,31 @@ function initSockets(io) {
       }
     });
     
+    // Host ends bidding prematurely or manual trigger
     socket.on('endBidding', ({ roomId }) => {
-      const room = store.getRoom(roomId);
-      if (room && room.hostId === socket.id) {
+      let room = store.getRoom(roomId);
+      if (room && room.users[socket.id] && room.users[socket.id].isHost) {
         room.state.status = 'ended';
-        
-        // Deduct balance from winner
-        if (room.state.highestBidder) {
-          const winnerSocketId = Object.keys(room.users).find(
-            id => room.users[id].username === room.state.highestBidder
-          );
-          if (winnerSocketId && room.users[winnerSocketId]) {
-            room.users[winnerSocketId].balance -= room.state.highestBid;
-          }
-        }
-        
-        io.to(roomId).emit('biddingEnded', room);
+        room.state.timeLeft = 0;
         io.to(roomId).emit('roomUpdated', room);
+        io.to(roomId).emit('biddingEnded');
       }
     });
+
+    // Mark item as sold
+    socket.on('markAsSold', ({ roomId }) => {
+      let room = store.getRoom(roomId);
+      if (room && room.users[socket.id] && room.users[socket.id].isHost) {
+        const result = store.markAsSold(roomId);
+        if (result.success) {
+          io.to(roomId).emit('roomUpdated', result.room);
+          if (result.winnerDetails) {
+            io.to(roomId).emit('biddingEnded');
+          }
+        }
+      }
+    });
+    
 
     // Timer Sync
     socket.on('syncTimer', ({ roomId }) => {
@@ -120,17 +126,12 @@ function initSockets(io) {
         const currentLeft = Math.max(0, room.state.timeLeft - elapsed);
         
         if (currentLeft <= 0) {
-          // Timer ended
-          room.state.status = 'ended';
-          if (room.state.highestBidder) {
-            const winnerSocketId = Object.keys(room.users).find(
-              id => room.users[id].username === room.state.highestBidder
-            );
-            if (winnerSocketId && room.users[winnerSocketId]) {
-              room.users[winnerSocketId].balance -= room.state.highestBid;
-            }
+          // Timer ended - optionally auto mark as sold or just end
+          const result = store.markAsSold(roomId);
+          if (result.success) {
+            io.to(roomId).emit('biddingEnded');
+            io.to(roomId).emit('roomUpdated', result.room);
           }
-          io.to(roomId).emit('biddingEnded', room);
         }
         
         io.to(roomId).emit('timerUpdate', { timeLeft: currentLeft, status: room.state.status });

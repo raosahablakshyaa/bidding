@@ -138,6 +138,10 @@ export function useBiddingRoom(roomId, username, isHost = false, startingBalance
     socket.emit('endBidding', { roomId });
   };
 
+  const markAsSold = () => {
+    socket.emit('markAsSold', { roomId });
+  };
+
   // Keep timer in sync for host
   useEffect(() => {
     let interval;
@@ -161,7 +165,8 @@ export function useBiddingRoom(roomId, username, isHost = false, startingBalance
       updateSettings,
       pauseBidding,
       resumeBidding,
-      endBidding
+      endBidding,
+      markAsSold
     }
   };
 }
