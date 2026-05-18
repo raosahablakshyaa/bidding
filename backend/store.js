@@ -48,11 +48,15 @@ function addUserToRoom(roomId, socketId, username, isHost = false) {
   // If user already exists (reconnect), update socketId mapping
   const existingEntry = Object.values(rooms[roomId].users).find(u => u.username === username);
   if (existingEntry && existingEntry.socketId !== socketId) {
-    // Remove old socket entry, preserve balance and inventory
+    // Move entry to new socketId, preserve all data including isHost
     const oldSocketId = existingEntry.socketId;
     const oldData = rooms[roomId].users[oldSocketId];
     delete rooms[roomId].users[oldSocketId];
-    rooms[roomId].users[socketId] = { ...oldData, socketId };
+    rooms[roomId].users[socketId] = { ...oldData, socketId, disconnected: false };
+    // If this was the host, update room's hostId too
+    if (oldData.isHost) {
+      rooms[roomId].hostId = socketId;
+    }
     return rooms[roomId];
   }
 

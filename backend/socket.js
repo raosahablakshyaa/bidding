@@ -15,19 +15,15 @@ function initSockets(io) {
           return callback({ error: 'Room does not exist' });
         }
       } else {
-        // Only allow isHost=true if this username matches the original host
-        const effectiveIsHost = isHost && room.originalHostUsername === username;
+        // Only original host username can have isHost=true
+        const effectiveIsHost = room.originalHostUsername === username;
 
         if (!effectiveIsHost && room.settings.password && room.settings.password !== password) {
           return callback({ error: 'Invalid room password' });
         }
 
+        // addUserToRoom handles reconnect: moves socketId, preserves isHost, updates hostId
         store.addUserToRoom(roomId, socket.id, username, effectiveIsHost);
-
-        // If original host is rejoining, restore hostId
-        if (effectiveIsHost) {
-          room.hostId = socket.id;
-        }
       }
 
       io.to(roomId).emit('roomUpdated', room);
@@ -145,18 +141,14 @@ function initSockets(io) {
         const room = store.rooms[roomId];
         if (room.users[socket.id]) {
           const wasHost = room.users[socket.id].isHost;
-          store.removeUserFromRoom(roomId, socket.id);
 
           if (wasHost) {
-            // Don't migrate host — original host can rejoin and reclaim
-            // Only delete room if no users remain
-            const remainingUsers = Object.keys(room.users);
-            if (remainingUsers.length === 0) {
-              store.deleteRoom(roomId);
-            } else {
-              // Notify room that host left but don't change host
-              io.to(roomId).emit('hostLeft');
-            }
+            // Keep host entry in room so isHost stays intact — just mark disconnected
+            // Host will reclaim on rejoin via addUserToRoom socketId update
+            room.users[socket.id].disconnected = true;
+            io.to(roomId).emit('hostLeft');
+          } else {
+            store.removeUserFromRoom(roomId, socket.id);
           }
 
           if (store.rooms[roomId]) {
