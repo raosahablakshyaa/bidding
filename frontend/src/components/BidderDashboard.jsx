@@ -125,7 +125,7 @@ export default function BidderDashboard({ room, timerStatus, actions, currentUse
           
           <form onSubmit={handleCustomBid} className="flex gap-4">
             <div className="flex-1 relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">₹</span>
               <input 
                 type="number"
                 value={customBid}
