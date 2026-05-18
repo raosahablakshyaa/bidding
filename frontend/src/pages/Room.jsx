@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useBiddingRoom } from '../hooks/useBiddingRoom';
 import HostDashboard from '../components/HostDashboard';
@@ -10,20 +10,21 @@ export default function Room() {
   const { roomId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   const queryParams = new URLSearchParams(location.search);
   const username = queryParams.get('username');
   const isHost = queryParams.get('isHost') === 'true';
   const budget = parseInt(queryParams.get('budget')) || 1000;
   const password = queryParams.get('password') || '';
 
-  const { 
-    room, 
-    error, 
-    timerStatus, 
-    isConnected, 
-    recentBids, 
-    actions 
+  const {
+    room,
+    error,
+    timerStatus,
+    isConnected,
+    recentBids,
+    lastWinner,
+    actions
   } = useBiddingRoom(roomId, username, isHost, budget, password);
 
   useEffect(() => {
@@ -56,19 +57,19 @@ export default function Room() {
   const currentUser = room.users[Object.keys(room.users).find(id => room.users[id].username === username)];
   const isUserHost = currentUser?.isHost || isHost;
 
-  if (room.state.status === 'ended') {
-    return (
-      <WinnerScreen 
-        room={room} 
-        isHost={isUserHost} 
-        actions={actions}
-        currentUser={currentUser}
-      />
-    );
-  }
-
   return (
     <div className="min-h-screen p-4 md:p-6 lg:p-8 flex flex-col">
+      {/* Winner Overlay */}
+      {lastWinner && (
+        <WinnerScreen
+          winnerDetails={lastWinner}
+          isHost={isUserHost}
+          currentUser={currentUser}
+          onDismiss={actions.dismissWinner}
+          onNextRound={(item) => { actions.startRound(item); actions.dismissWinner(); }}
+        />
+      )}
+
       {/* Top Bar */}
       <header className="flex justify-between items-center mb-6 glass-card p-4 rounded-2xl">
         <div className="flex items-center gap-4">
@@ -90,18 +91,18 @@ export default function Room() {
       </header>
 
       {isUserHost ? (
-        <HostDashboard 
-          room={room} 
-          timerStatus={timerStatus} 
-          actions={actions} 
-          recentBids={recentBids} 
+        <HostDashboard
+          room={room}
+          timerStatus={timerStatus}
+          actions={actions}
+          recentBids={recentBids}
           roomId={roomId}
         />
       ) : (
-        <BidderDashboard 
-          room={room} 
-          timerStatus={timerStatus} 
-          actions={actions} 
+        <BidderDashboard
+          room={room}
+          timerStatus={timerStatus}
+          actions={actions}
           currentUser={currentUser}
           recentBids={recentBids}
         />

@@ -6,7 +6,7 @@ function initSockets(io) {
 
     socket.on('joinRoom', ({ roomId, username, isHost, startingBalance, password }, callback) => {
       socket.join(roomId);
-      
+
       let room = store.getRoom(roomId);
       if (!room) {
         if (isHost) {
@@ -15,12 +15,21 @@ function initSockets(io) {
           return callback({ error: 'Room does not exist' });
         }
       } else {
-        if (!isHost && room.settings.password && room.settings.password !== password) {
+        // Only allow isHost=true if this username matches the original host
+        const effectiveIsHost = isHost && room.originalHostUsername === username;
+
+        if (!effectiveIsHost && room.settings.password && room.settings.password !== password) {
           return callback({ error: 'Invalid room password' });
         }
-        store.addUserToRoom(roomId, socket.id, username, isHost);
+
+        store.addUserToRoom(roomId, socket.id, username, effectiveIsHost);
+
+        // If original host is rejoining, restore hostId
+        if (effectiveIsHost) {
+          room.hostId = socket.id;
+        }
       }
-      
+
       io.to(roomId).emit('roomUpdated', room);
       callback({ success: true, room });
     });
@@ -37,7 +46,7 @@ function initSockets(io) {
         room.state.timeLeft = room.settings.timerDuration;
         room.state.timerStartedAt = Date.now();
         room.state.timerPausedAt = null;
-        
+
         io.to(roomId).emit('roomUpdated', room);
       }
     });
@@ -45,15 +54,9 @@ function initSockets(io) {
     // Place a bid
     socket.on('placeBid', ({ roomId, amount }, callback) => {
       const result = store.placeBid(roomId, socket.id, amount);
-      if (result.error) {
-        return callback(result);
-      }
-      
-      // Deduct balance logic (optional: could only deduct from winner at end, but requirements say "Animated balance deduction")
-      // If we deduct immediately, we should refund the previous highest bidder.
-      // For simplicity in a fast game: deduct from current, refund previous.
+      if (result.error) return callback(result);
+
       const room = result.room;
-      
       io.to(roomId).emit('bidPlaced', {
         bidder: room.users[socket.id].username,
         amount,
@@ -70,7 +73,7 @@ function initSockets(io) {
         io.to(roomId).emit('roomUpdated', room);
       }
     });
-    
+
     socket.on('pauseBidding', ({ roomId }) => {
       const room = store.getRoom(roomId);
       if (room && room.hostId === socket.id && room.state.status === 'active') {
@@ -81,7 +84,7 @@ function initSockets(io) {
         io.to(roomId).emit('roomUpdated', room);
       }
     });
-    
+
     socket.on('resumeBidding', ({ roomId }) => {
       const room = store.getRoom(roomId);
       if (room && room.hostId === socket.id && room.state.status === 'paused') {
@@ -91,32 +94,28 @@ function initSockets(io) {
         io.to(roomId).emit('roomUpdated', room);
       }
     });
-    
-    // Host ends bidding prematurely or manual trigger
+
     socket.on('endBidding', ({ roomId }) => {
-      let room = store.getRoom(roomId);
-      if (room && room.users[socket.id] && room.users[socket.id].isHost) {
-        room.state.status = 'ended';
+      const room = store.getRoom(roomId);
+      if (room && room.hostId === socket.id) {
+        room.state.status = 'roundEnded';
         room.state.timeLeft = 0;
         io.to(roomId).emit('roomUpdated', room);
-        io.to(roomId).emit('biddingEnded');
+        io.to(roomId).emit('biddingEnded', { winnerDetails: null });
       }
     });
 
     // Mark item as sold
     socket.on('markAsSold', ({ roomId }) => {
-      let room = store.getRoom(roomId);
-      if (room && room.users[socket.id] && room.users[socket.id].isHost) {
+      const room = store.getRoom(roomId);
+      if (room && room.hostId === socket.id) {
         const result = store.markAsSold(roomId);
         if (result.success) {
           io.to(roomId).emit('roomUpdated', result.room);
-          if (result.winnerDetails) {
-            io.to(roomId).emit('biddingEnded');
-          }
+          io.to(roomId).emit('biddingEnded', { winnerDetails: result.winnerDetails });
         }
       }
     });
-    
 
     // Timer Sync
     socket.on('syncTimer', ({ roomId }) => {
@@ -124,16 +123,16 @@ function initSockets(io) {
       if (room && room.state.status === 'active') {
         const elapsed = Math.floor((Date.now() - room.state.timerStartedAt) / 1000);
         const currentLeft = Math.max(0, room.state.timeLeft - elapsed);
-        
+
         if (currentLeft <= 0) {
-          // Timer ended - optionally auto mark as sold or just end
           const result = store.markAsSold(roomId);
           if (result.success) {
-            io.to(roomId).emit('biddingEnded');
             io.to(roomId).emit('roomUpdated', result.room);
+            io.to(roomId).emit('biddingEnded', { winnerDetails: result.winnerDetails });
           }
+          return;
         }
-        
+
         io.to(roomId).emit('timerUpdate', { timeLeft: currentLeft, status: room.state.status });
       }
     });
@@ -141,27 +140,25 @@ function initSockets(io) {
     // Disconnect
     socket.on('disconnect', () => {
       console.log('User disconnected:', socket.id);
-      
-      // Find which room the user was in and remove them
+
       for (const roomId in store.rooms) {
         const room = store.rooms[roomId];
         if (room.users[socket.id]) {
           const wasHost = room.users[socket.id].isHost;
           store.removeUserFromRoom(roomId, socket.id);
-          
+
           if (wasHost) {
-            // If host disconnects, either migrate host or close room
+            // Don't migrate host — original host can rejoin and reclaim
+            // Only delete room if no users remain
             const remainingUsers = Object.keys(room.users);
-            if (remainingUsers.length > 0) {
-              const newHostId = remainingUsers[0];
-              room.users[newHostId].isHost = true;
-              room.hostId = newHostId;
-              io.to(roomId).emit('hostMigrated', newHostId);
-            } else {
+            if (remainingUsers.length === 0) {
               store.deleteRoom(roomId);
+            } else {
+              // Notify room that host left but don't change host
+              io.to(roomId).emit('hostLeft');
             }
           }
-          
+
           if (store.rooms[roomId]) {
             io.to(roomId).emit('roomUpdated', store.rooms[roomId]);
           }

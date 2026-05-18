@@ -1,36 +1,32 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, Square, Plus, Settings, Users, Activity, Copy, Check } from 'lucide-react';
+import { Play, Pause, Square, Settings, Users, Activity, Copy, Check } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 export default function HostDashboard({ room, timerStatus, actions, recentBids, roomId }) {
   const [newItemName, setNewItemName] = useState('');
-  const [showSettings, setShowSettings] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
 
   const handleStart = (e) => {
     e.preventDefault();
-    if (!newItemName.trim()) {
-      alert("Enter an item/name to bid on");
-      return;
-    }
-    actions.startRound(newItemName);
+    if (!newItemName.trim()) return;
+    actions.startRound(newItemName.trim());
     setNewItemName('');
   };
 
   const copyLink = () => {
-    const url = `${window.location.origin}/join/${roomId}`;
-    navigator.clipboard.writeText(url);
+    navigator.clipboard.writeText(`${window.location.origin}/join/${roomId}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const usersList = Object.values(room.users).filter(u => !u.isHost);
+  const isIdle = room.state.status === 'waiting' || room.state.status === 'roundEnded';
 
   return (
     <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Left Column - Controls & Info */}
+      {/* Left Column */}
       <div className="flex flex-col gap-6">
         <div className="glass-card p-6">
           <div className="flex justify-between items-center mb-6">
@@ -55,19 +51,23 @@ export default function HostDashboard({ room, timerStatus, actions, recentBids, 
             )}
           </AnimatePresence>
 
-          {room.state.status === 'waiting' || room.state.status === 'ended' ? (
+          {isIdle ? (
             <form onSubmit={handleStart} className="flex flex-col gap-4">
+              {room.state.status === 'roundEnded' && (
+                <p className="text-sm text-green-400 font-medium">Round ended. Start the next item:</p>
+              )}
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Item or Profile to Bid On</label>
-                <input 
-                  type="text" 
+                <label className="block text-sm text-gray-400 mb-2">Item to Bid On</label>
+                <input
+                  type="text"
                   value={newItemName}
                   onChange={(e) => setNewItemName(e.target.value)}
-                  className="input-field" 
+                  className="input-field"
                   placeholder="e.g. VIP Ticket"
+                  autoFocus={room.state.status === 'roundEnded'}
                 />
               </div>
-              <button type="submit" className="btn-primary py-3 flex items-center justify-center gap-2">
+              <button type="submit" disabled={!newItemName.trim()} className="btn-primary py-3 flex items-center justify-center gap-2">
                 <Play size={20} /> Start Bidding
               </button>
             </form>
@@ -77,7 +77,7 @@ export default function HostDashboard({ room, timerStatus, actions, recentBids, 
                 <p className="text-sm text-primary mb-1">Currently Bidding On</p>
                 <p className="text-2xl font-bold">{room.state.currentItem}</p>
               </div>
-              
+
               <div className="flex gap-2">
                 {room.state.status === 'active' ? (
                   <button onClick={actions.pauseBidding} className="flex-1 btn-secondary py-3 flex items-center justify-center gap-2">
@@ -88,7 +88,6 @@ export default function HostDashboard({ room, timerStatus, actions, recentBids, 
                     <Play size={20} /> Resume
                   </button>
                 )}
-                
                 <button onClick={actions.endBidding} className="flex-1 btn-danger py-3 flex items-center justify-center gap-2">
                   <Square size={20} /> Force End
                 </button>
@@ -110,7 +109,12 @@ export default function HostDashboard({ room, timerStatus, actions, recentBids, 
                 <div key={user.username} className="flex items-center justify-between p-3 bg-black/30 rounded-xl border border-white/5">
                   <div className="flex items-center gap-3">
                     <img src={user.avatarUrl} alt="" className="w-8 h-8 rounded-full bg-gray-800" />
-                    <span className="font-medium">{user.username}</span>
+                    <div>
+                      <span className="font-medium">{user.username}</span>
+                      {user.inventory?.length > 0 && (
+                        <span className="ml-2 text-xs text-purple-400">🎒 {user.inventory.length} item{user.inventory.length > 1 ? 's' : ''}</span>
+                      )}
+                    </div>
                   </div>
                   <span className="font-mono text-secondary">${user.balance.toLocaleString()}</span>
                 </div>
@@ -120,7 +124,7 @@ export default function HostDashboard({ room, timerStatus, actions, recentBids, 
         </div>
 
         {/* Sold Items History */}
-        <div className="glass-card p-6 flex-1 flex flex-col mt-6 lg:mt-0">
+        <div className="glass-card p-6 flex-1 flex flex-col">
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-green-400">Sold Items History</h2>
           <div className="flex-1 overflow-y-auto pr-2 space-y-3">
             {!room.state.soldItems || room.state.soldItems.length === 0 ? (
@@ -140,20 +144,27 @@ export default function HostDashboard({ room, timerStatus, actions, recentBids, 
         </div>
       </div>
 
-      {/* Middle & Right Columns - Main Arena */}
+      {/* Middle & Right Columns */}
       <div className="lg:col-span-2 flex flex-col gap-6">
         <div className="glass-card p-8 flex flex-col items-center justify-center relative overflow-hidden min-h-[300px]">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-secondary/10 opacity-50"></div>
-          
+
           <div className="z-10 text-center w-full">
+            {room.state.status === 'roundEnded' && (
+              <div className="mb-4">
+                <span className="px-4 py-1.5 rounded-full bg-green-900/40 text-green-400 border border-green-500/30 text-sm font-bold uppercase tracking-wider">
+                  Round Ended — Add next item to continue
+                </span>
+              </div>
+            )}
             <h3 className="text-gray-400 text-lg uppercase tracking-wider mb-2">Highest Bid</h3>
             <div className="text-7xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 mb-4 font-mono">
               ${room.state.highestBid.toLocaleString()}
             </div>
-            
+
             <AnimatePresence mode="wait">
               {room.state.highestBidder ? (
-                <motion.div 
+                <motion.div
                   key={room.state.highestBidder}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -168,16 +179,15 @@ export default function HostDashboard({ room, timerStatus, actions, recentBids, 
               )}
             </AnimatePresence>
           </div>
-          
-          {/* Timer Ring */}
-          {room.state.status !== 'waiting' && (
+
+          {room.state.status === 'active' || room.state.status === 'paused' ? (
             <div className="absolute top-6 right-6 flex flex-col items-end">
               <span className="text-xs text-gray-400 uppercase tracking-widest mb-1">Time Left</span>
               <span className={`text-3xl font-mono font-bold ${timerStatus.timeLeft <= 10 ? 'text-accent animate-pulse' : 'text-secondary'}`}>
                 00:{timerStatus.timeLeft.toString().padStart(2, '0')}
               </span>
             </div>
-          )}
+          ) : null}
         </div>
 
         <div className="glass-card p-6 flex-1 flex flex-col">
@@ -187,8 +197,8 @@ export default function HostDashboard({ room, timerStatus, actions, recentBids, 
               <div className="absolute inset-0 flex items-center justify-center text-gray-500">No activity yet</div>
             ) : (
               <AnimatePresence>
-                {recentBids.map((bid, i) => (
-                  <motion.div 
+                {recentBids.map((bid) => (
+                  <motion.div
                     key={bid.id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
