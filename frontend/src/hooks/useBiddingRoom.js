@@ -23,7 +23,18 @@ export function useBiddingRoom(roomId, username, isHost = false, startingBalance
             setError(response.error);
             toast.error(response.error);
           } else {
-            setRoom(response.room);
+            const r = response.room;
+            setRoom(r);
+            // Restore timer status
+            setTimerStatus({ timeLeft: r.state.timeLeft, status: r.state.status });
+            // Restore lastWinner if round just ended
+            if (r.state.status === 'roundEnded' && r.state.soldItems?.length > 0) {
+              setLastWinner(r.state.soldItems[0]);
+            }
+            // Restore recent bids from bidHistory
+            if (r.state.bidHistory?.length > 0) {
+              setRecentBids(r.state.bidHistory.slice(0, 10).map((b, i) => ({ ...b, id: i })));
+            }
           }
         });
       }
