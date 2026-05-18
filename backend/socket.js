@@ -57,6 +57,16 @@ function initSockets(io) {
       if (result.error) return callback(result);
 
       const room = result.room;
+
+      // Extend timer by 2 seconds on every bid
+      if (room.state.status === 'active') {
+        const elapsed = Math.floor((Date.now() - room.state.timerStartedAt) / 1000);
+        const currentLeft = Math.max(0, room.state.timeLeft - elapsed);
+        const newTimeLeft = Math.max(currentLeft, 2);
+        room.state.timeLeft = newTimeLeft;
+        room.state.timerStartedAt = Date.now();
+      }
+
       io.to(roomId).emit('bidPlaced', {
         bidder: room.users[socket.id].username,
         amount,
@@ -157,12 +167,11 @@ function initSockets(io) {
           const wasHost = room.users[socket.id].isHost;
 
           if (wasHost) {
-            // Keep host entry in room so isHost stays intact — just mark disconnected
-            // Host will reclaim on rejoin via addUserToRoom socketId update
             room.users[socket.id].disconnected = true;
             io.to(roomId).emit('hostLeft');
           } else {
-            store.removeUserFromRoom(roomId, socket.id);
+            // Keep bidder entry too so balance/inventory preserved on reconnect
+            room.users[socket.id].disconnected = true;
           }
 
           if (store.rooms[roomId]) {
