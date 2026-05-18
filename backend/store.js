@@ -19,9 +19,10 @@ function createRoom(roomId, hostSocketId, username, startingBalance = 1000, pass
       currentItem: null,
       highestBid: 0,
       highestBidder: null,
+      lastBidder: null,
       timerStartedAt: null,
       timerPausedAt: null,
-      timeLeft: 60,
+      timeLeft: 0,
       bidHistory: [],
       soldItems: [],
       itemQueue: []
@@ -97,9 +98,14 @@ function placeBid(roomId, socketId, amount) {
 
   if (amount <= room.state.highestBid) return { error: 'Bid must be higher than current highest bid' };
   if (amount > user.balance) return { error: 'Insufficient balance' };
+  if (room.state.lastBidder === user.username) return { error: 'Wait for someone else to bid before bidding again' };
 
   room.state.highestBid = amount;
   room.state.highestBidder = user.username;
+  room.state.lastBidder = user.username;
+  // Reset 5s countdown on every bid
+  room.state.timeLeft = 5;
+  room.state.timerStartedAt = Date.now();
 
   room.state.bidHistory.unshift({ bidder: user.username, amount, timestamp: Date.now() });
   if (room.state.bidHistory.length > 50) room.state.bidHistory.pop();
@@ -143,9 +149,11 @@ function markAsSold(roomId) {
   room.state.currentItem = null;
   room.state.highestBid = 0;
   room.state.highestBidder = null;
+  room.state.lastBidder = null;
   room.state.bidHistory = [];
   room.state.status = 'roundEnded';
   room.state.timeLeft = 0;
+  room.state.timerStartedAt = null;
 
   return { success: true, room, winnerDetails };
 }
@@ -178,9 +186,10 @@ function startNextFromQueue(roomId) {
   room.state.currentItem = item;
   room.state.highestBid = 0;
   room.state.highestBidder = null;
+  room.state.lastBidder = null;
   room.state.bidHistory = [];
-  room.state.timeLeft = room.settings.timerDuration;
-  room.state.timerStartedAt = Date.now();
+  room.state.timeLeft = 0;
+  room.state.timerStartedAt = null;
   room.state.timerPausedAt = null;
 
   return { success: true, room, item };

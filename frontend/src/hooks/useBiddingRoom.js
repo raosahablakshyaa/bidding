@@ -136,16 +136,16 @@ export function useBiddingRoom(roomId, username, isHost = false, startingBalance
   const removeFromQueue = (index) => socket.emit('removeFromQueue', { roomId, index });
   const startFromQueue = () => socket.emit('startFromQueue', { roomId });
 
-  // Keep timer in sync — all connected clients sync, not just host
+  // Sync timer every second when active — all clients
   useEffect(() => {
     let interval;
-    if (isHost && room?.state?.status === 'active') {
+    if (room?.state?.status === 'active') {
       interval = setInterval(() => {
         socket.emit('syncTimer', { roomId });
-      }, 1000);
+      }, 500);
     }
     return () => clearInterval(interval);
-  }, [isHost, room?.state?.status, roomId]);
+  }, [room?.state?.status, roomId]);
 
   return {
     room,

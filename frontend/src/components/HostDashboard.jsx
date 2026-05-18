@@ -252,11 +252,11 @@ export default function HostDashboard({ room, timerStatus, actions, recentBids, 
             </AnimatePresence>
           </div>
 
-          {(room.state.status === 'active' || room.state.status === 'paused') && (
+          {(room.state.status === 'active' || room.state.status === 'paused') && room.state.timerStartedAt && (
             <div className="absolute top-6 right-6 flex flex-col items-end">
-              <span className="text-xs text-gray-400 uppercase tracking-widest mb-1">Time Left</span>
-              <span className={`text-3xl font-mono font-bold ${timerStatus.timeLeft <= 10 ? 'text-accent animate-pulse' : 'text-secondary'}`}>
-                00:{timerStatus.timeLeft.toString().padStart(2, '0')}
+              <span className="text-xs text-gray-400 uppercase tracking-widest mb-1">Selling in</span>
+              <span className={`text-3xl font-mono font-bold ${timerStatus.timeLeft <= 3 ? 'text-accent animate-pulse' : 'text-secondary'}`}>
+                {timerStatus.timeLeft}s
               </span>
             </div>
           )}

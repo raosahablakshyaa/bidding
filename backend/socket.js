@@ -41,9 +41,10 @@ function initSockets(io) {
         room.state.currentItem = item;
         room.state.highestBid = 0;
         room.state.highestBidder = null;
+        room.state.lastBidder = null;
         room.state.bidHistory = [];
-        room.state.timeLeft = room.settings.timerDuration;
-        room.state.timerStartedAt = Date.now();
+        room.state.timeLeft = 0;
+        room.state.timerStartedAt = null;
         room.state.timerPausedAt = null;
         io.to(roomId).emit('roomUpdated', room);
       }
@@ -90,16 +91,6 @@ function initSockets(io) {
       if (result.error) return callback(result);
 
       const room = result.room;
-
-      // Extend timer by 2 seconds on every bid
-      if (room.state.status === 'active') {
-        const elapsed = Math.floor((Date.now() - room.state.timerStartedAt) / 1000);
-        const currentLeft = Math.max(0, room.state.timeLeft - elapsed);
-        const newTimeLeft = Math.max(currentLeft, 3);
-        room.state.timeLeft = newTimeLeft;
-        room.state.timerStartedAt = Date.now();
-      }
-
       io.to(roomId).emit('bidPlaced', {
         bidder: room.users[socket.id].username,
         amount,
@@ -170,11 +161,11 @@ function initSockets(io) {
       }
     });
 
-    // Timer Sync
+    // Timer Sync — only runs when a bid has been placed (timerStartedAt is set)
     socket.on('syncTimer', ({ roomId }) => {
       const room = store.getRoom(roomId);
-      if (room && room.state.status === 'active') {
-        const elapsed = Math.floor((Date.now() - room.state.timerStartedAt) / 1000);
+      if (room && room.state.status === 'active' && room.state.timerStartedAt) {
+        const elapsed = (Date.now() - room.state.timerStartedAt) / 1000;
         const currentLeft = Math.max(0, room.state.timeLeft - elapsed);
 
         if (currentLeft <= 0) {
@@ -186,7 +177,7 @@ function initSockets(io) {
           return;
         }
 
-        io.to(roomId).emit('timerUpdate', { timeLeft: currentLeft, status: room.state.status });
+        io.to(roomId).emit('timerUpdate', { timeLeft: Math.ceil(currentLeft), status: room.state.status });
       }
     });
 

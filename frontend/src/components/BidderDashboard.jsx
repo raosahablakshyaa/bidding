@@ -11,6 +11,8 @@ export default function BidderDashboard({ room, timerStatus, actions, currentUse
   const myInventory = currentUser?.inventory || [];
   const isActive = room.state.status === 'active';
   const isRoundEnded = room.state.status === 'roundEnded';
+  const iMyTurn = isActive && room.state.lastBidder !== currentUser?.username;
+  const isMyLastBid = isActive && room.state.lastBidder === currentUser?.username;
 
   const sortedUsers = Object.values(room.users)
     .filter(u => !u.isHost)
@@ -119,11 +121,11 @@ export default function BidderDashboard({ room, timerStatus, actions, currentUse
             </AnimatePresence>
           </div>
 
-          {isActive && (
+          {isActive && room.state.timerStartedAt && (
             <div className="absolute top-6 right-6 flex flex-col items-end bg-black/40 p-3 rounded-xl border border-white/10">
-              <span className="text-xs text-gray-400 uppercase tracking-widest mb-1">Time Left</span>
-              <span className={`text-3xl font-mono font-bold ${timerStatus.timeLeft <= 10 ? 'text-accent animate-pulse' : 'text-white'}`}>
-                00:{timerStatus.timeLeft.toString().padStart(2, '0')}
+              <span className="text-xs text-gray-400 uppercase tracking-widest mb-1">Selling in</span>
+              <span className={`text-3xl font-mono font-bold ${timerStatus.timeLeft <= 3 ? 'text-accent animate-pulse' : 'text-white'}`}>
+                {timerStatus.timeLeft}s
               </span>
             </div>
           )}
@@ -139,12 +141,18 @@ export default function BidderDashboard({ room, timerStatus, actions, currentUse
             </div>
           </div>
 
+          {isMyLastBid && (
+            <div className="flex items-center justify-center gap-3 py-3 px-4 bg-yellow-900/20 border border-yellow-500/30 rounded-xl">
+              <span className="text-yellow-400 text-sm font-bold">⏳ You placed the last bid — waiting for someone else to bid...</span>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[10, 50, 100, 500].map(amount => {
               const canAfford = myBalance >= (currentHighest + amount);
               return (
-                <button key={amount} onClick={() => handleQuickBid(amount)} disabled={!canAfford || isSubmitting}
-                  className="btn-primary py-4 flex flex-col items-center justify-center gap-1 group relative overflow-hidden">
+                <button key={amount} onClick={() => handleQuickBid(amount)} disabled={!canAfford || isSubmitting || isMyLastBid}
+                  className="btn-primary py-4 flex flex-col items-center justify-center gap-1 group relative overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed">
                   <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform"></div>
                   <span className="text-sm text-white/70">+{amount}</span>
                   <span className="font-bold text-lg">${(currentHighest + amount).toLocaleString()}</span>
@@ -161,7 +169,7 @@ export default function BidderDashboard({ room, timerStatus, actions, currentUse
                 className="input-field pl-8 font-mono text-lg" />
             </div>
             <button type="submit"
-              disabled={isSubmitting || !customBid || parseInt(customBid) <= currentHighest || parseInt(customBid) > myBalance}
+              disabled={isSubmitting || isMyLastBid || !customBid || parseInt(customBid) <= currentHighest || parseInt(customBid) > myBalance}
               className="btn-secondary px-8 text-lg flex items-center gap-2">
               Bid Custom <ChevronUp size={20} />
             </button>
