@@ -21,16 +21,16 @@ const rooms = {};
 //   }
 // }
 
-function createRoom(roomId, hostId, username) {
+function createRoom(roomId, hostId, username, startingBalance = 1000) {
   rooms[roomId] = {
     roomId,
     hostId,
     settings: {
       title: 'Live Bidding',
-      startingBalance: 1000,
+      startingBalance: startingBalance,
       timerDuration: 60,
       bidIncrement: 10,
-      maxBalance: 1000
+      maxBalance: startingBalance
     },
     state: {
       status: 'waiting',

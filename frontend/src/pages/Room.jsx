@@ -14,6 +14,7 @@ export default function Room() {
   const queryParams = new URLSearchParams(location.search);
   const username = queryParams.get('username');
   const isHost = queryParams.get('isHost') === 'true';
+  const budget = parseInt(queryParams.get('budget')) || 1000;
 
   const { 
     room, 
@@ -22,7 +23,7 @@ export default function Room() {
     isConnected, 
     recentBids, 
     actions 
-  } = useBiddingRoom(roomId, username, isHost);
+  } = useBiddingRoom(roomId, username, isHost, budget);
 
   useEffect(() => {
     if (!username) {

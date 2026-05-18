@@ -6,6 +6,7 @@ import { Zap, Users, Shield, ArrowRight } from 'lucide-react';
 export default function Landing() {
   const [roomId, setRoomId] = useState('');
   const [username, setUsername] = useState('');
+  const [budget, setBudget] = useState(1000);
   const navigate = useNavigate();
 
   const generateRoomId = () => {
@@ -20,7 +21,7 @@ export default function Landing() {
     }
     const newRoomId = generateRoomId();
     // Redirect to room page as host
-    navigate(`/room/${newRoomId}?username=${encodeURIComponent(username)}&isHost=true`);
+    navigate(`/room/${newRoomId}?username=${encodeURIComponent(username)}&isHost=true&budget=${budget}`);
   };
 
   const handleJoinRoom = (e) => {
@@ -77,6 +78,16 @@ export default function Landing() {
                 className="input-field"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Max Budget (Starting Balance)</label>
+              <input 
+                type="number" 
+                min="100"
+                className="input-field font-mono"
+                value={budget}
+                onChange={(e) => setBudget(parseInt(e.target.value) || 0)}
               />
             </div>
             <div className="mt-auto pt-6">

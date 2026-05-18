@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { socket } from '../socket';
 import toast from 'react-hot-toast';
 
-export function useBiddingRoom(roomId, username, isHost = false) {
+export function useBiddingRoom(roomId, username, isHost = false, startingBalance = 1000) {
   const [room, setRoom] = useState(null);
   const [error, setError] = useState(null);
   const [timerStatus, setTimerStatus] = useState({ timeLeft: 0, status: 'waiting' });
@@ -10,10 +10,14 @@ export function useBiddingRoom(roomId, username, isHost = false) {
   const [recentBids, setRecentBids] = useState([]);
 
   useEffect(() => {
+    let timeoutId;
+    
     function onConnect() {
       setIsConnected(true);
+      if (timeoutId) clearTimeout(timeoutId);
+      
       if (roomId && username) {
-        socket.emit('joinRoom', { roomId, username, isHost }, (response) => {
+        socket.emit('joinRoom', { roomId, username, isHost, startingBalance }, (response) => {
           if (response.error) {
             setError(response.error);
             toast.error(response.error);
@@ -74,6 +78,15 @@ export function useBiddingRoom(roomId, username, isHost = false) {
     socket.on('timerUpdate', onTimerUpdate);
     socket.on('biddingEnded', onBiddingEnded);
     socket.on('hostMigrated', onHostMigrated);
+
+    // Connection timeout check
+    if (!socket.connected) {
+      timeoutId = setTimeout(() => {
+        if (!socket.connected) {
+          setError("Failed to connect to the arena. Please check if VITE_BACKEND_URL is set in Vercel.");
+        }
+      }, 5000);
+    }
 
     // Initial connection handling if already connected
     if (socket.connected && roomId && username) {

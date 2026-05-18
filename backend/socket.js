@@ -4,14 +4,13 @@ function initSockets(io) {
   io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
 
-    // Join a room
-    socket.on('joinRoom', ({ roomId, username, isHost }, callback) => {
+    socket.on('joinRoom', ({ roomId, username, isHost, startingBalance }, callback) => {
       socket.join(roomId);
       
       let room = store.getRoom(roomId);
       if (!room) {
         if (isHost) {
-          room = store.createRoom(roomId, socket.id, username);
+          room = store.createRoom(roomId, socket.id, username, startingBalance);
         } else {
           return callback({ error: 'Room does not exist' });
         }
