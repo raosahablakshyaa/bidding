@@ -20,9 +20,13 @@ const io = new Server(server, {
 const initSockets = require('./socket');
 initSockets(io);
 
-// Basic health check
+// Basic health checks
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'Bidding Arena Backend is running' });
+});
+
+app.get('/', (req, res) => {
+  res.send('Bidding Arena Backend is active! Please open the Frontend app to use the UI.');
 });
 
 const PORT = process.env.PORT || 4000;
