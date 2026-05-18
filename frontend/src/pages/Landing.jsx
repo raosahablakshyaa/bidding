@@ -144,7 +144,6 @@ export default function Landing() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />
-              />
             </div>
             <div>
               <label className="block text-sm text-gray-400 mb-2">Room Password (If any)</label>
