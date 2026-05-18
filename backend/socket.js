@@ -62,7 +62,7 @@ function initSockets(io) {
       if (room.state.status === 'active') {
         const elapsed = Math.floor((Date.now() - room.state.timerStartedAt) / 1000);
         const currentLeft = Math.max(0, room.state.timeLeft - elapsed);
-        const newTimeLeft = Math.max(currentLeft, 2);
+        const newTimeLeft = Math.max(currentLeft, 3);
         room.state.timeLeft = newTimeLeft;
         room.state.timerStartedAt = Date.now();
       }
