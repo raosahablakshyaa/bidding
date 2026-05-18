@@ -64,7 +64,7 @@ export default function HostDashboard({ room, timerStatus, actions, recentBids, 
                   onChange={(e) => setNewItemName(e.target.value)}
                   className="input-field"
                   placeholder="e.g. VIP Ticket"
-                  autoFocus={room.state.status === 'roundEnded'}
+                  autoFocus
                 />
               </div>
               <button type="submit" disabled={!newItemName.trim()} className="btn-primary py-3 flex items-center justify-center gap-2">

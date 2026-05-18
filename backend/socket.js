@@ -33,7 +33,11 @@ function initSockets(io) {
     // Host: Start/Reset Round
     socket.on('startRound', ({ roomId, item }) => {
       const room = store.getRoom(roomId);
-      if (room && room.hostId === socket.id) {
+      const callerUser = room && room.users[socket.id];
+      const isCallerHost = callerUser && callerUser.isHost;
+      if (room && (room.hostId === socket.id || isCallerHost)) {
+        // Keep hostId in sync
+        if (isCallerHost) room.hostId = socket.id;
         room.state.status = 'active';
         room.state.currentItem = item;
         room.state.highestBid = 0;
@@ -64,7 +68,9 @@ function initSockets(io) {
     // Host controls
     socket.on('updateSettings', ({ roomId, settings }) => {
       const room = store.getRoom(roomId);
-      if (room && room.hostId === socket.id) {
+      const isCallerHost = room && room.users[socket.id]?.isHost;
+      if (room && (room.hostId === socket.id || isCallerHost)) {
+        if (isCallerHost) room.hostId = socket.id;
         store.updateRoomSettings(roomId, settings);
         io.to(roomId).emit('roomUpdated', room);
       }
@@ -72,7 +78,9 @@ function initSockets(io) {
 
     socket.on('pauseBidding', ({ roomId }) => {
       const room = store.getRoom(roomId);
-      if (room && room.hostId === socket.id && room.state.status === 'active') {
+      const isCallerHost = room && room.users[socket.id]?.isHost;
+      if (room && (room.hostId === socket.id || isCallerHost) && room.state.status === 'active') {
+        if (isCallerHost) room.hostId = socket.id;
         room.state.status = 'paused';
         const elapsed = Math.floor((Date.now() - room.state.timerStartedAt) / 1000);
         room.state.timeLeft = Math.max(0, room.state.timeLeft - elapsed);
@@ -83,7 +91,9 @@ function initSockets(io) {
 
     socket.on('resumeBidding', ({ roomId }) => {
       const room = store.getRoom(roomId);
-      if (room && room.hostId === socket.id && room.state.status === 'paused') {
+      const isCallerHost = room && room.users[socket.id]?.isHost;
+      if (room && (room.hostId === socket.id || isCallerHost) && room.state.status === 'paused') {
+        if (isCallerHost) room.hostId = socket.id;
         room.state.status = 'active';
         room.state.timerStartedAt = Date.now();
         room.state.timerPausedAt = null;
@@ -93,7 +103,9 @@ function initSockets(io) {
 
     socket.on('endBidding', ({ roomId }) => {
       const room = store.getRoom(roomId);
-      if (room && room.hostId === socket.id) {
+      const isCallerHost = room && room.users[socket.id]?.isHost;
+      if (room && (room.hostId === socket.id || isCallerHost)) {
+        if (isCallerHost) room.hostId = socket.id;
         room.state.status = 'roundEnded';
         room.state.timeLeft = 0;
         io.to(roomId).emit('roomUpdated', room);
@@ -104,7 +116,9 @@ function initSockets(io) {
     // Mark item as sold
     socket.on('markAsSold', ({ roomId }) => {
       const room = store.getRoom(roomId);
-      if (room && room.hostId === socket.id) {
+      const isCallerHost = room && room.users[socket.id]?.isHost;
+      if (room && (room.hostId === socket.id || isCallerHost)) {
+        if (isCallerHost) room.hostId = socket.id;
         const result = store.markAsSold(roomId);
         if (result.success) {
           io.to(roomId).emit('roomUpdated', result.room);
