@@ -30,13 +30,12 @@ function initSockets(io) {
       callback({ success: true, room });
     });
 
-    // Host: Start/Reset Round
+    // Host: Start/Reset Round (manual item name)
     socket.on('startRound', ({ roomId, item }) => {
       const room = store.getRoom(roomId);
       const callerUser = room && room.users[socket.id];
       const isCallerHost = callerUser && callerUser.isHost;
       if (room && (room.hostId === socket.id || isCallerHost)) {
-        // Keep hostId in sync
         if (isCallerHost) room.hostId = socket.id;
         room.state.status = 'active';
         room.state.currentItem = item;
@@ -46,8 +45,42 @@ function initSockets(io) {
         room.state.timeLeft = room.settings.timerDuration;
         room.state.timerStartedAt = Date.now();
         room.state.timerPausedAt = null;
-
         io.to(roomId).emit('roomUpdated', room);
+      }
+    });
+
+    // Host: Add item to queue
+    socket.on('addToQueue', ({ roomId, itemName }, callback) => {
+      const room = store.getRoom(roomId);
+      const isCallerHost = room && room.users[socket.id]?.isHost;
+      if (room && (room.hostId === socket.id || isCallerHost)) {
+        if (isCallerHost) room.hostId = socket.id;
+        const result = store.addToQueue(roomId, itemName.trim());
+        io.to(roomId).emit('roomUpdated', result.room);
+        if (callback) callback({ success: true });
+      }
+    });
+
+    // Host: Remove item from queue
+    socket.on('removeFromQueue', ({ roomId, index }) => {
+      const room = store.getRoom(roomId);
+      const isCallerHost = room && room.users[socket.id]?.isHost;
+      if (room && (room.hostId === socket.id || isCallerHost)) {
+        if (isCallerHost) room.hostId = socket.id;
+        const result = store.removeFromQueue(roomId, index);
+        io.to(roomId).emit('roomUpdated', result.room);
+      }
+    });
+
+    // Host: Start next random item from queue
+    socket.on('startFromQueue', ({ roomId }) => {
+      const room = store.getRoom(roomId);
+      const isCallerHost = room && room.users[socket.id]?.isHost;
+      if (room && (room.hostId === socket.id || isCallerHost)) {
+        if (isCallerHost) room.hostId = socket.id;
+        const result = store.startNextFromQueue(roomId);
+        if (result.error) return;
+        io.to(roomId).emit('roomUpdated', result.room);
       }
     });
 

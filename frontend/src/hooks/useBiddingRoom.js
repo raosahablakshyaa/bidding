@@ -121,6 +121,9 @@ export function useBiddingRoom(roomId, username, isHost = false, startingBalance
   const endBidding = () => socket.emit('endBidding', { roomId });
   const markAsSold = () => socket.emit('markAsSold', { roomId });
   const dismissWinner = () => setLastWinner(null);
+  const addToQueue = (itemName) => socket.emit('addToQueue', { roomId, itemName });
+  const removeFromQueue = (index) => socket.emit('removeFromQueue', { roomId, index });
+  const startFromQueue = () => socket.emit('startFromQueue', { roomId });
 
   // Keep timer in sync — all connected clients sync, not just host
   useEffect(() => {
@@ -148,7 +151,10 @@ export function useBiddingRoom(roomId, username, isHost = false, startingBalance
       resumeBidding,
       endBidding,
       markAsSold,
-      dismissWinner
+      dismissWinner,
+      addToQueue,
+      removeFromQueue,
+      startFromQueue
     }
   };
 }

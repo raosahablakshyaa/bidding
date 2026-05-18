@@ -23,7 +23,8 @@ function createRoom(roomId, hostSocketId, username, startingBalance = 1000, pass
       timerPausedAt: null,
       timeLeft: 60,
       bidHistory: [],
-      soldItems: []
+      soldItems: [],
+      itemQueue: []
     },
     users: {}
   };
@@ -139,7 +140,6 @@ function markAsSold(roomId) {
   }
 
   // Reset for next item but keep room open (status = 'roundEnded')
-  const lastItem = room.state.currentItem;
   room.state.currentItem = null;
   room.state.highestBid = 0;
   room.state.highestBidder = null;
@@ -147,7 +147,43 @@ function markAsSold(roomId) {
   room.state.status = 'roundEnded';
   room.state.timeLeft = 0;
 
-  return { success: true, room, winnerDetails, lastItem };
+  return { success: true, room, winnerDetails };
+}
+
+function addToQueue(roomId, itemName) {
+  const room = rooms[roomId];
+  if (!room) return { error: 'Room not found' };
+  room.state.itemQueue.push(itemName);
+  return { success: true, room };
+}
+
+function removeFromQueue(roomId, index) {
+  const room = rooms[roomId];
+  if (!room) return { error: 'Room not found' };
+  room.state.itemQueue.splice(index, 1);
+  return { success: true, room };
+}
+
+function startNextFromQueue(roomId) {
+  const room = rooms[roomId];
+  if (!room) return { error: 'Room not found' };
+  if (room.state.itemQueue.length === 0) return { error: 'Queue is empty' };
+
+  // Pick random item from queue
+  const randomIndex = Math.floor(Math.random() * room.state.itemQueue.length);
+  const item = room.state.itemQueue[randomIndex];
+  room.state.itemQueue.splice(randomIndex, 1);
+
+  room.state.status = 'active';
+  room.state.currentItem = item;
+  room.state.highestBid = 0;
+  room.state.highestBidder = null;
+  room.state.bidHistory = [];
+  room.state.timeLeft = room.settings.timerDuration;
+  room.state.timerStartedAt = Date.now();
+  room.state.timerPausedAt = null;
+
+  return { success: true, room, item };
 }
 
 module.exports = {
@@ -159,5 +195,8 @@ module.exports = {
   removeUserFromRoom,
   updateRoomSettings,
   placeBid,
-  markAsSold
+  markAsSold,
+  addToQueue,
+  removeFromQueue,
+  startNextFromQueue
 };
