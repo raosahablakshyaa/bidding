@@ -6,11 +6,12 @@ export default function JoinRoom() {
   const { roomId } = useParams();
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
   const handleJoin = (e) => {
     e.preventDefault();
     if (username.trim()) {
-      navigate(`/room/${roomId}?username=${encodeURIComponent(username)}`);
+      navigate(`/room/${roomId}?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`);
     }
   };
 
@@ -34,6 +35,17 @@ export default function JoinRoom() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               autoFocus
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Room Password</label>
+            <input 
+              type="text" 
+              placeholder="Required if room is locked" 
+              className="input-field"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
           </div>
           

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { socket } from '../socket';
 import toast from 'react-hot-toast';
 
-export function useBiddingRoom(roomId, username, isHost = false, startingBalance = 1000) {
+export function useBiddingRoom(roomId, username, isHost = false, startingBalance = 1000, password = '') {
   const [room, setRoom] = useState(null);
   const [error, setError] = useState(null);
   const [timerStatus, setTimerStatus] = useState({ timeLeft: 0, status: 'waiting' });
@@ -17,7 +17,7 @@ export function useBiddingRoom(roomId, username, isHost = false, startingBalance
       if (timeoutId) clearTimeout(timeoutId);
       
       if (roomId && username) {
-        socket.emit('joinRoom', { roomId, username, isHost, startingBalance }, (response) => {
+        socket.emit('joinRoom', { roomId, username, isHost, startingBalance, password }, (response) => {
           if (response.error) {
             setError(response.error);
             toast.error(response.error);

@@ -21,13 +21,14 @@ const rooms = {};
 //   }
 // }
 
-function createRoom(roomId, hostId, username, startingBalance = 1000) {
+function createRoom(roomId, hostId, username, startingBalance = 1000, password = '') {
   rooms[roomId] = {
     roomId,
     hostId,
     settings: {
       title: 'Live Bidding',
       startingBalance: startingBalance,
+      password: password,
       timerDuration: 60,
       bidIncrement: 10,
       maxBalance: startingBalance

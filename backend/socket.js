@@ -4,17 +4,20 @@ function initSockets(io) {
   io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
 
-    socket.on('joinRoom', ({ roomId, username, isHost, startingBalance }, callback) => {
+    socket.on('joinRoom', ({ roomId, username, isHost, startingBalance, password }, callback) => {
       socket.join(roomId);
       
       let room = store.getRoom(roomId);
       if (!room) {
         if (isHost) {
-          room = store.createRoom(roomId, socket.id, username, startingBalance);
+          room = store.createRoom(roomId, socket.id, username, startingBalance, password);
         } else {
           return callback({ error: 'Room does not exist' });
         }
       } else {
+        if (!isHost && room.settings.password && room.settings.password !== password) {
+          return callback({ error: 'Invalid room password' });
+        }
         store.addUserToRoom(roomId, socket.id, username, isHost);
       }
       

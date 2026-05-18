@@ -6,6 +6,8 @@ import { Zap, Users, Shield, ArrowRight } from 'lucide-react';
 export default function Landing() {
   const [roomId, setRoomId] = useState('');
   const [username, setUsername] = useState('');
+  const [hostPassword, setHostPassword] = useState('');
+  const [joinPassword, setJoinPassword] = useState('');
   const [budget, setBudget] = useState(1000);
   const navigate = useNavigate();
 
@@ -21,7 +23,7 @@ export default function Landing() {
     }
     const newRoomId = generateRoomId();
     // Redirect to room page as host
-    navigate(`/room/${newRoomId}?username=${encodeURIComponent(username)}&isHost=true&budget=${budget}`);
+    navigate(`/room/${newRoomId}?username=${encodeURIComponent(username)}&isHost=true&budget=${budget}&password=${encodeURIComponent(hostPassword)}`);
   };
 
   const handleJoinRoom = (e) => {
@@ -30,7 +32,7 @@ export default function Landing() {
       alert("Please enter both Room ID and Username");
       return;
     }
-    navigate(`/room/${roomId}?username=${encodeURIComponent(username)}`);
+    navigate(`/room/${roomId}?username=${encodeURIComponent(username)}&password=${encodeURIComponent(joinPassword)}`);
   };
 
   return (
@@ -90,6 +92,16 @@ export default function Landing() {
                 onChange={(e) => setBudget(parseInt(e.target.value) || 0)}
               />
             </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Room Password (Optional)</label>
+              <input 
+                type="text" 
+                placeholder="Leave blank for open room" 
+                className="input-field"
+                value={hostPassword}
+                onChange={(e) => setHostPassword(e.target.value)}
+              />
+            </div>
             <div className="mt-auto pt-6">
               <button type="submit" className="w-full btn-primary flex items-center justify-center gap-2 py-3 text-lg">
                 Create Room <ArrowRight size={20} />
@@ -131,6 +143,17 @@ export default function Landing() {
                 className="input-field"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+              />
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Room Password (If any)</label>
+              <input 
+                type="text" 
+                placeholder="Required if set by host" 
+                className="input-field"
+                value={joinPassword}
+                onChange={(e) => setJoinPassword(e.target.value)}
               />
             </div>
             <div className="mt-auto pt-6">
